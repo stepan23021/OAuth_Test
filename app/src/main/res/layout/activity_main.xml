@@ -30,13 +30,14 @@
             android:id="@+id/disconnect_btn" app:layout_constraintEnd_toEndOf="parent" android:layout_marginEnd="8dp"
             android:layout_marginBottom="8dp" app:layout_constraintBottom_toBottomOf="parent"
             android:backgroundTint="#35C2B6" android:visibility="gone"/>
-    <ImageView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" tools:srcCompat="@tools:sample/avatars"
+    <de.hdodenhof.circleimageview.CircleImageView
+            android:layout_width="150dp"
+            android:layout_height="150dp"
             android:id="@+id/userPhoto" android:layout_marginTop="150dp"
             app:layout_constraintTop_toTopOf="parent" app:layout_constraintEnd_toEndOf="parent"
             android:layout_marginEnd="8dp" app:layout_constraintStart_toStartOf="parent"
-            android:layout_marginStart="8dp"/>
+            android:layout_marginStart="8dp" tools:srcCompat="@android:drawable/btn_star_big_on"
+            android:src="@mipmap/ic_launcher"/>
     <TextView
             android:text="TextView"
             android:layout_width="wrap_content"

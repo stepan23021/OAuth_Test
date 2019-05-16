@@ -1,25 +1,28 @@
 package com.example.oauthStudio
 
+import android.app.Activity
+import android.content.Context
 import android.content.Intent
-import android.opengl.Visibility
+import android.graphics.Color
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
+import android.util.AttributeSet
 import android.util.Log
 import android.view.View
-import com.bumptech.glide.Glide
+import android.widget.ImageView
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.SignInButton
 import com.google.android.gms.common.api.ApiException
-import com.google.android.gms.common.api.CommonStatusCodes
-import com.google.android.gms.common.internal.service.Common
-import com.google.android.gms.tasks.OnCompleteListener
 import com.google.android.gms.tasks.Task
-import com.google.firebase.auth.FirebaseAuth
+import com.nostra13.universalimageloader.core.DisplayImageOptions
+import com.nostra13.universalimageloader.core.ImageLoader
+import com.nostra13.universalimageloader.core.ImageLoaderConfiguration
+import com.nostra13.universalimageloader.core.display.CircleBitmapDisplayer
+import de.hdodenhof.circleimageview.CircleImageView
 import kotlinx.android.synthetic.main.activity_main.*
-import com.bumptech.glide.request.RequestOptions
 
 
 private const val RC_SIGN_IN = 9001
@@ -29,13 +32,23 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
 
     private lateinit var mGoogleSignInClient: GoogleSignInClient
 
+    lateinit var image: CircleImageView
+
+    lateinit var imageLoader: ImageLoader
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        imageLoader = ImageLoader.getInstance()
+        this.imageLoader.init(ImageLoaderConfiguration.createDefault(baseContext))
+
         sign_in_btn.setOnClickListener(this)
         sign_out_btn.setOnClickListener(this)
         disconnect_btn.setOnClickListener(this)
+
+        image = findViewById(R.id.userPhoto)
+
 
         val gBtn: SignInButton = sign_in_btn
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -76,12 +89,11 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     private fun updateUI(account: GoogleSignInAccount?) {
         if (account != null) {
             username.text = account.displayName
-            val options = RequestOptions()
-                .centerCrop()
-                .placeholder(R.drawable.ic_launcher_background)
-                .error(R.drawable.ic_launcher_background)
-            Glide.with(this).load(account.photoUrl).apply(options).into(userPhoto)
             email.text = account.email
+
+            if (account.photoUrl != null) {
+                imageLoader.displayImage(account.photoUrl.toString(), image)
+            } else image.setImageResource(R.drawable.images)
 
             sign_in_btn.visibility = View.GONE
             sign_out_btn.visibility = View.VISIBLE
@@ -89,6 +101,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         } else {
             username.text = null
             email.text = null
+            imageLoader.displayImage(null, image)
             sign_in_btn.visibility = View.VISIBLE
             sign_out_btn.visibility = View.GONE
             disconnect_btn.visibility = View.GONE
