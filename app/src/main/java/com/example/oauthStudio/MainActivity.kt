@@ -41,8 +41,10 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         imageLoader = ImageLoader.getInstance()
         imageLoader.init(ImageLoaderConfiguration.createDefault(applicationContext))
 
-        sign_in_btn.setColorScheme(SignInButton.COLOR_LIGHT)
-        sign_in_btn.setSize(SignInButton.SIZE_STANDARD)
+        callbackManager = CallbackManager.Factory.create()
+
+        google_sign_in.setColorScheme(SignInButton.COLOR_LIGHT)
+        google_sign_in.setSize(SignInButton.SIZE_STANDARD)
 
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestEmail()
@@ -50,11 +52,11 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso)
 
         initializeClickListeners()
+        facebookLogin()
+    }
 
-        callbackManager = CallbackManager.Factory.create()
-
-        setupFacebookLoginButton()
-
+    private fun facebookLogin() {
+        facebook_login_button.setPermissions("email", "user_birthday", "public_profile")
         LoginManager.getInstance().registerCallback(callbackManager, object : FacebookCallback<LoginResult> {
             override fun onSuccess(result: LoginResult?) {
                 val token: String? = result?.accessToken?.token
@@ -75,30 +77,11 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             }
 
             override fun onCancel() {
-                username.text = "Cancel"
+                //TODO add code if needed
             }
 
             override fun onError(error: FacebookException?) {
-                username.text = "Error  $error"
-            }
-
-        })
-    }
-
-    private fun setupFacebookLoginButton() {
-        login_button.setPermissions("email", "user_birthday", "public_profile")
-        login_button.registerCallback(callbackManager, object : FacebookCallback<LoginResult> {
-
-            override fun onSuccess(result: LoginResult?) {
-                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onCancel() {
-                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onError(error: FacebookException?) {
-                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+                //TODO add code if needed
             }
         })
     }
@@ -118,18 +101,17 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     }
 
     private fun initializeClickListeners() {
-        sign_in_btn.setOnClickListener(this)
+        google_sign_in.setOnClickListener(this)
         sign_out_btn.setOnClickListener(this)
         disconnect_btn.setOnClickListener(this)
+        facebook_login_button.setOnClickListener(this)
     }
 
     override fun onStart() {
         super.onStart()
-
+        facebookLogin()
         val account: GoogleSignInAccount? = GoogleSignIn.getLastSignedInAccount(this)
-        if (account != null) {
-            updateUI(generateRawAccount(account))
-        }
+        updateUI(generateRawAccount(account))
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -144,7 +126,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     private fun generateRawAccount(account: Any?): Account {
         val rawAccount = Account()
         if (account is GoogleSignInAccount) {
-            rawAccount.userName = account.displayName + account.familyName
+            rawAccount.userName = account.displayName
             rawAccount.email = account.email
             rawAccount.profilePictureLink = account.photoUrl.toString()
         }
@@ -154,9 +136,9 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     private fun handleSignInResult(completedTask: Task<GoogleSignInAccount>) {
         try {
             val gAccount: GoogleSignInAccount? = completedTask.getResult(ApiException::class.java)
-            val account = Account()
+            var account = Account()
             if (gAccount != null) {
-                generateRawAccount(gAccount)
+                account = generateRawAccount(gAccount)
             }
             updateUI(account)
         } catch (e: ApiException) {
@@ -174,7 +156,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
                 imageLoader.displayImage(account.profilePictureLink, user_photo_IV)
             } else user_photo_IV.setImageResource(R.drawable.images)
 
-            sign_in_btn.visibility = View.GONE
+            google_sign_in.visibility = View.GONE
             sign_out_btn.visibility = View.VISIBLE
             disconnect_btn.visibility = View.VISIBLE
         } else {
@@ -182,7 +164,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             email.text = null
             imageLoader.displayImage(null, user_photo_IV)
 
-            sign_in_btn.visibility = View.VISIBLE
+            google_sign_in.visibility = View.VISIBLE
             sign_out_btn.visibility = View.GONE
             disconnect_btn.visibility = View.GONE
         }
@@ -197,6 +179,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             .addOnCompleteListener(this) {
                 updateUI(null)
             }
+        LoginManager.getInstance().logOut()
     }
 
     private fun revokeAccess() {
@@ -208,9 +191,10 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
 
     override fun onClick(v: View?) {
         when (v) {
-            sign_in_btn -> signIn()
+            google_sign_in -> signIn()
             sign_out_btn -> signOut()
             disconnect_btn -> revokeAccess()
+            facebook_login_button -> facebookLogin()
         }
     }
 }
