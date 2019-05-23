@@ -5,6 +5,12 @@ import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.view.View
+import com.facebook.CallbackManager
+import com.facebook.FacebookCallback
+import com.facebook.FacebookException
+import com.facebook.GraphRequest
+import com.facebook.login.LoginManager
+import com.facebook.login.LoginResult
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
@@ -15,6 +21,8 @@ import com.google.android.gms.tasks.Task
 import com.nostra13.universalimageloader.core.ImageLoader
 import com.nostra13.universalimageloader.core.ImageLoaderConfiguration
 import kotlinx.android.synthetic.main.activity_main.*
+import org.json.JSONObject
+import java.net.URL
 
 
 private const val RC_SIGN_IN = 9001
@@ -24,6 +32,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
 
     private lateinit var mGoogleSignInClient: GoogleSignInClient
     private lateinit var imageLoader: ImageLoader
+    private lateinit var callbackManager: CallbackManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,6 +50,71 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso)
 
         initializeClickListeners()
+
+        callbackManager = CallbackManager.Factory.create()
+
+        setupFacebookLoginButton()
+
+        LoginManager.getInstance().registerCallback(callbackManager, object : FacebookCallback<LoginResult> {
+            override fun onSuccess(result: LoginResult?) {
+                val token: String? = result?.accessToken?.token
+                if (token != null) {
+                    val request: GraphRequest =
+                        GraphRequest.newMeRequest(
+                            result.accessToken
+                        ) { jsonObject, _ ->
+                            if (jsonObject != null) {
+                                getData(jsonObject)
+                            }
+                        }
+                    val bundle = Bundle()
+                    bundle.putString("fields", "id,email,birthday,name")
+                    request.parameters = bundle
+                    request.executeAsync()
+                }
+            }
+
+            override fun onCancel() {
+                username.text = "Cancel"
+            }
+
+            override fun onError(error: FacebookException?) {
+                username.text = "Error  $error"
+            }
+
+        })
+    }
+
+    private fun setupFacebookLoginButton() {
+        login_button.setPermissions("email", "user_birthday", "public_profile")
+        login_button.registerCallback(callbackManager, object : FacebookCallback<LoginResult> {
+
+            override fun onSuccess(result: LoginResult?) {
+                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+            }
+
+            override fun onCancel() {
+                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+            }
+
+            override fun onError(error: FacebookException?) {
+                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+            }
+        })
+    }
+
+    private fun getData(jsonObject: JSONObject) {
+        try {
+            val account = Account()
+            account.profilePictureLink =
+                URL("https://graph.facebook.com/" + jsonObject.getString("id") + "/picture?width=250&height=250").toString()
+            account.email = jsonObject.getString("email")
+            account.userName = jsonObject.getString("name")
+            account.dateOfBirth = jsonObject.getString("birthday")
+            updateUI(account)
+        } catch (e: Exception) {
+
+        }
     }
 
     private fun initializeClickListeners() {
@@ -53,20 +127,37 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         super.onStart()
 
         val account: GoogleSignInAccount? = GoogleSignIn.getLastSignedInAccount(this)
-        updateUI(account)
+        if (account != null) {
+            updateUI(generateRawAccount(account))
+        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
+        callbackManager.onActivityResult(requestCode, resultCode, data)
 
         if (requestCode == RC_SIGN_IN) {
             handleSignInResult(GoogleSignIn.getSignedInAccountFromIntent(data))
         }
+        super.onActivityResult(requestCode, resultCode, data)
+    }
+
+    private fun generateRawAccount(account: Any?): Account {
+        val rawAccount = Account()
+        if (account is GoogleSignInAccount) {
+            rawAccount.userName = account.displayName + account.familyName
+            rawAccount.email = account.email
+            rawAccount.profilePictureLink = account.photoUrl.toString()
+        }
+        return rawAccount
     }
 
     private fun handleSignInResult(completedTask: Task<GoogleSignInAccount>) {
         try {
-            val account: GoogleSignInAccount? = completedTask.getResult(ApiException::class.java)
+            val gAccount: GoogleSignInAccount? = completedTask.getResult(ApiException::class.java)
+            val account = Account()
+            if (gAccount != null) {
+                generateRawAccount(gAccount)
+            }
             updateUI(account)
         } catch (e: ApiException) {
             Log.w(TAG, "signInResult:failed code=" + e.statusCode)
@@ -74,13 +165,13 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         }
     }
 
-    private fun updateUI(account: GoogleSignInAccount?) {
+    private fun updateUI(account: Account?) {
         if (account != null) {
-            username.text = account.displayName
+            username.text = account.userName
             email.text = account.email
 
-            if (account.photoUrl != null) {
-                imageLoader.displayImage(account.photoUrl.toString(), user_photo_IV)
+            if (account.profilePictureLink != "") {
+                imageLoader.displayImage(account.profilePictureLink, user_photo_IV)
             } else user_photo_IV.setImageResource(R.drawable.images)
 
             sign_in_btn.visibility = View.GONE
