@@ -29,19 +29,19 @@
             android:layout_marginStart="8dp"
             android:layout_marginBottom="8dp" app:layout_constraintBottom_toBottomOf="parent"
             android:textColor="#FFFFFF"
-            android:backgroundTint="#C23535" android:visibility="gone"/>
+            android:backgroundTint="#C23535" android:visibility="visible"/>
     <Button
             android:text="Revoke"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:id="@+id/disconnect_btn" app:layout_constraintEnd_toEndOf="parent" android:layout_marginEnd="8dp"
             android:layout_marginBottom="8dp" app:layout_constraintBottom_toBottomOf="parent"
-            android:backgroundTint="#35C2B6" android:visibility="gone"/>
+            android:backgroundTint="#35C2B6" android:visibility="visible"/>
     <TextView
             android:layout_width="0dp"
             android:layout_height="50dp"
             android:maxWidth="250dp"
-            android:id="@+id/username"
+            android:id="@+id/logged_in_user_name"
             app:layout_constraintTop_toBottomOf="@+id/user_photo_IV"
             app:layout_constraintStart_toStartOf="parent"
             android:layout_marginStart="8dp"
@@ -55,7 +55,7 @@
             android:layout_height="50dp"
             android:maxWidth="250dp"
             android:id="@+id/logged_in_user_email"
-            app:layout_constraintTop_toBottomOf="@+id/username"
+            app:layout_constraintTop_toBottomOf="@+id/logged_in_user_name"
             app:layout_constraintStart_toStartOf="parent"
             android:layout_marginStart="8dp"
             app:layout_constraintEnd_toEndOf="parent"

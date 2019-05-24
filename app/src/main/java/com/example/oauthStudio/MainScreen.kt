@@ -18,23 +18,17 @@ class MainScreen : AppCompatActivity(), View.OnClickListener, Serializable {
     private lateinit var mGoogleSignInClient: GoogleSignInClient
     private lateinit var imageLoader: ImageLoader
 
-    override fun onClick(v: View?) {
-        when (v) {
-            sign_out_btn -> signOut()
-            disconnect_btn -> revokeAccess()
-        }
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
-        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestEmail()
-            .build()
-        mGoogleSignInClient = GoogleSignIn.getClient(this, gso)
+        mGoogleSignInClient = GoogleSignIn.getClient(
+            this,
+            GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestEmail()
+                .build()
+        )
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main_screen)
 
-        sign_out_btn.setOnClickListener(this)
-        disconnect_btn.setOnClickListener(this)
+        initializeOnClickListeners()
 
         imageLoader = ImageLoader.getInstance()
         imageLoader.init(ImageLoaderConfiguration.createDefault(applicationContext))
@@ -42,29 +36,32 @@ class MainScreen : AppCompatActivity(), View.OnClickListener, Serializable {
         viewAccount()
     }
 
-    private fun viewAccount() {
-        val account = intent.getParcelableExtra("Account") as Account?
-        if (account != null) {
-            username.text = account.userName
-            logged_in_user_email.text = account.email
+    private fun initializeOnClickListeners() {
+        sign_out_btn.setOnClickListener(this)
+        disconnect_btn.setOnClickListener(this)
+    }
 
-            if (account.profilePictureLink != "") {
-                imageLoader.displayImage(account.profilePictureLink, user_photo_IV)
-            } else user_photo_IV.setImageResource(R.drawable.images)
+    private fun viewAccount() {
+        val account = intent.getParcelableExtra("Account") as Account
+        logged_in_user_name.text = account.userName
+        logged_in_user_email.text = account.email
+
+        if (account.profilePictureLink != "") {
+            imageLoader.displayImage(account.profilePictureLink, user_photo_IV)
+        } else {
+            user_photo_IV.setImageResource(R.drawable.images)
         }
-        sign_out_btn.visibility = View.VISIBLE
-        disconnect_btn.visibility = View.VISIBLE
     }
 
     private fun signOut() {
-        mGoogleSignInClient.revokeAccess().addOnCompleteListener(this) {
+        mGoogleSignInClient.signOut().addOnCompleteListener(this) {
             this.finish()
         }
         LoginManager.getInstance().logOut()
     }
 
     private fun revokeAccess() {
-        mGoogleSignInClient.signOut().addOnCompleteListener(this) {
+        mGoogleSignInClient.revokeAccess().addOnCompleteListener(this) {
             this.finish()
         }
         LoginManager.getInstance().logOut()
@@ -73,5 +70,12 @@ class MainScreen : AppCompatActivity(), View.OnClickListener, Serializable {
     override fun onDestroy() {
         imageLoader.destroy()
         super.onDestroy()
+    }
+
+    override fun onClick(view: View?) {
+        when (view) {
+            sign_out_btn -> signOut()
+            disconnect_btn -> revokeAccess()
+        }
     }
 }

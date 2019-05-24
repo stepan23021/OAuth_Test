@@ -7,6 +7,7 @@ import android.util.Log
 import android.view.View
 import android.widget.Toast
 import com.example.oauthStudio.model.Account
+import com.example.oauthStudio.model.User
 import com.facebook.*
 import com.facebook.login.LoginManager
 import com.facebook.login.LoginResult
@@ -18,6 +19,7 @@ import com.google.android.gms.common.SignInButton
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.tasks.Task
 import kotlinx.android.synthetic.main.activity_login.*
+import kotlinx.android.synthetic.main.activity_main_screen.*
 import org.json.JSONObject
 import java.io.Serializable
 import java.util.*
@@ -34,18 +36,19 @@ class LoginActivity : AppCompatActivity(), View.OnClickListener, Serializable {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
+        initializeClickListeners()
 
         google_sign_in.setColorScheme(SignInButton.COLOR_LIGHT)
         google_sign_in.setSize(SignInButton.SIZE_STANDARD)
 
         callbackManager = CallbackManager.Factory.create()
 
-        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestEmail()
-            .build()
-        mGoogleSignInClient = GoogleSignIn.getClient(this, gso)
-
-        initializeClickListeners()
+        mGoogleSignInClient = GoogleSignIn.getClient(
+            this,
+            GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestEmail()
+                .build()
+        )
     }
 
     private fun facebookLogin() {
@@ -53,20 +56,15 @@ class LoginActivity : AppCompatActivity(), View.OnClickListener, Serializable {
         LoginManager.getInstance().registerCallback(callbackManager, object : FacebookCallback<LoginResult> {
             override fun onSuccess(result: LoginResult?) {
                 Toast.makeText(applicationContext, "Successfully logged in", Toast.LENGTH_SHORT).show()
-                Log.d("Success", "Login")
-                val token: String? = result?.accessToken?.token
-                if (token != null) {
-                    val request: GraphRequest =
-                        GraphRequest.newMeRequest(
-                            result.accessToken
-                        ) { jsonObject, _ ->
-                            if (jsonObject != null) {
-                                getData(jsonObject)
-                            }
+                if (result?.accessToken?.token != null) {
+                    val request: GraphRequest = GraphRequest.newMeRequest(result.accessToken) { jsonObject, _ ->
+                        if (jsonObject != null) {
+                            getData(jsonObject)
                         }
-                    val bundle = Bundle()
-                    bundle.putString("fields", "id, email, birthday, name")
-                    request.parameters = bundle
+                    }
+                    val parameters = Bundle()
+                    parameters.putString("fields", "id, email, birthday, name")
+                    request.parameters = parameters
                     request.executeAsync()
                 }
             }
@@ -89,7 +87,7 @@ class LoginActivity : AppCompatActivity(), View.OnClickListener, Serializable {
             account.email = jsonObject.getString("email")
             account.userName = jsonObject.getString("name")
             account.dateOfBirth = jsonObject.getString("birthday")
-            loginProceed(account)
+            login(account)
         } catch (e: Exception) {
             Log.e("Something is wrong", e.toString())
         }
@@ -102,12 +100,11 @@ class LoginActivity : AppCompatActivity(), View.OnClickListener, Serializable {
 
     override fun onStart() {
         super.onStart()
-        val account: GoogleSignInAccount? = GoogleSignIn.getLastSignedInAccount(this)
-        if (account != null) {
-            loginProceed(generateRawAccount(account))
+        val lastSignedAccount: GoogleSignInAccount? = GoogleSignIn.getLastSignedInAccount(this)
+        if (lastSignedAccount != null) {
+            login(generateRawAccount(lastSignedAccount))
         }
-        val token: AccessToken = AccessToken.getCurrentAccessToken()
-        Toast.makeText(applicationContext, token.toString(), Toast.LENGTH_LONG).show()
+        Toast.makeText(applicationContext, AccessToken.getCurrentAccessToken().toString(), Toast.LENGTH_LONG).show()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -116,13 +113,11 @@ class LoginActivity : AppCompatActivity(), View.OnClickListener, Serializable {
         if (requestCode == RC_SIGN_IN) {
             handleSignInResult(GoogleSignIn.getSignedInAccountFromIntent(data))
         }
+
         super.onActivityResult(requestCode, resultCode, data)
     }
 
-    private fun generateRawAccount(account: Any?): Account? {
-        if (account == null) {
-            return null
-        }
+    private fun generateRawAccount(account: Any): Account {
         val rawAccount = Account()
         if (account is GoogleSignInAccount) {
             rawAccount.userName = account.displayName
@@ -135,40 +130,46 @@ class LoginActivity : AppCompatActivity(), View.OnClickListener, Serializable {
     private fun handleSignInResult(completedTask: Task<GoogleSignInAccount>) {
         try {
             val gAccount: GoogleSignInAccount? = completedTask.getResult(ApiException::class.java)
-            var account: Account? = Account()
             if (gAccount != null) {
-                account = generateRawAccount(gAccount)
+                login(generateRawAccount(gAccount))
             }
-            loginProceed(account)
         } catch (e: ApiException) {
             Log.w(TAG, "signInResult:failed code=" + e.statusCode)
         }
     }
 
-    private fun loginProceed(account: Account?) {
-        if (account != null) {
-            val intent = Intent(applicationContext, MainScreen::class.java)
-            intent.putExtra("Account", account)
-            startActivity(intent)
-        } else {
-            email.text = null
-            password.text = null
-            google_sign_in.visibility = View.VISIBLE
-            facebook_login_button.visibility = View.VISIBLE
-        }
+    private fun login(account: Account) {
+        val intent = Intent(applicationContext, MainScreen::class.java)
+        intent.putExtra("Account", account)
+        startActivity(intent)
     }
 
     private fun signIn() {
         startActivityForResult(mGoogleSignInClient.signInIntent, RC_SIGN_IN)
     }
 
-    override fun onClick(v: View?) {
-        when (v) {
-            registerTW_btn -> {
-                Toast.makeText(applicationContext, "Register clicked", Toast.LENGTH_SHORT).show()
-            }
+    override fun onClick(view: View?) {
+        when (view) {
+            registerTW_btn -> registerNewUser()
             google_sign_in -> signIn()
             facebook_login_button -> facebookLogin()
+            normal_login_btn -> simpleLogin()
         }
+    }
+
+    private fun simpleLogin() {
+        val user = User()
+        user.email = email.text.toString()
+        user.password = password.text.toString()
+        val existingUser = validateUser(user)
+        login(existingUser)
+    }
+
+    private fun validateUser(user: User): Account {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    private fun registerNewUser() {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 }
